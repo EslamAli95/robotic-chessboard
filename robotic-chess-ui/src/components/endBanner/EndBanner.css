@@ -1,0 +1,23 @@
+.draw-banner {
+  margin: 1rem auto;
+  padding: 0.75rem 1.5rem;
+  color: var(--banner-text, #fff);
+  display: inline-flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.new-game-button {
+  background: var(--button-bg, #fff);
+  color: var(--button-text, #333);
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.new-game-button:hover {
+  background-color: var(--button-hover-bg, #eee);
+}

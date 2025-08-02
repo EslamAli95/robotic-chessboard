@@ -1,0 +1,7 @@
+.App {
+  display: flex;
+  flex-direction: column;
+  color: rgb(199, 229, 229);
+  width: 100%;
+  height: 100%;
+}

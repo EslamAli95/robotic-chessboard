@@ -1,0 +1,141 @@
+import { useRef, useState, useEffect } from "react";
+import { Chess, Move as ChessJsMove } from "chess.js";
+import { sendMove, fetchLatestMove } from "../api";
+import { OpponentType } from "../components/timer/TimerConfigDialog";
+
+/** Which robot this hook drives */
+export type RobotId = "white" | "black";
+
+/** Basic time-control settings */
+export interface TimerSettings {
+  mode: "clock" | "per-move";
+  minutes: number;
+}
+
+export interface UseChessGame {
+  fen: string;
+  moves: string[];
+  gameOver: boolean;
+  robotId: RobotId;
+  timerSettings: TimerSettings;
+
+  makeMove: (from: string, to: string) => boolean;
+  goToMove: (halfMoveIndex: number) => void;
+  undoLast: () => void;
+  gameRef: React.RefObject<Chess>;
+}
+
+export default function useChessGame(
+  robotId: RobotId,
+  timerSettings: TimerSettings,
+  opponent: OpponentType, // ⬅️ NEW parameter to choose AI vs. human/robot
+  pollInterval = 2000
+): UseChessGame {
+  const gameRef = useRef(new Chess());
+  const [fen, setFen] = useState<string>(gameRef.current.fen());
+  const [moves, setMoves] = useState<string[]>([]);
+  const [gameOver, setGameOver] = useState<boolean>(false);
+
+  const makeMove = (from: string, to: string): boolean => {
+    let mv: ChessJsMove;
+    try {
+      const result = gameRef.current.move({ from, to, promotion: "q" });
+      if (!result) return false;
+      mv = result;
+    } catch {
+      return false;
+    }
+
+    const san = mv.san;
+    setFen(gameRef.current.fen());
+    setMoves((prev) => [...prev, san]);
+
+    if (gameRef.current.isCheckmate()) {
+      setGameOver(true);
+      const loser = gameRef.current.turn() === "w" ? "White" : "Black";
+      const victor = loser === "White" ? "Black" : "White";
+      alert(`Checkmate! ${victor} wins!`);
+    }
+
+    sendMove(robotId, from, to).catch((e: any) => {
+      // Rollback on error
+      gameRef.current.undo();
+      setFen(gameRef.current.fen());
+      setMoves((prev) => prev.filter((m) => m !== san));
+      console.error("API error sending move:", e.response?.data || e);
+      const detail =
+        e.response?.data?.detail ||
+        e.response?.data?.message ||
+        e.message ||
+        "Server error sending move to robot";
+      alert(detail);
+    });
+
+    return true;
+  };
+
+  const goToMove = (halfMoveIndex: number): void => {
+    const clamped = Math.min(Math.max(0, halfMoveIndex), moves.length);
+    const g = new Chess();
+    for (let i = 0; i < clamped; i++) {
+      try {
+        const result = g.move(moves[i], { strict: false });
+        if (!result) {
+          console.warn(`Failed to apply SAN move #${i + 1}: ${moves[i]}`);
+        }
+      } catch (err) {
+        console.warn(`Error replaying SAN move #${i + 1}:`, moves[i], err);
+      }
+    }
+    gameRef.current = g;
+    setFen(g.fen());
+  };
+
+  useEffect(() => {
+    if (pollInterval <= 0) return;
+    const id = setInterval(async () => {
+      if (gameOver) return;
+
+      // human or remote‐robot branch
+      if (opponent === "robot" || opponent === "human") {
+        try {
+          const res = await fetchLatestMove(robotId);
+          const d = res.data;
+          if (d.from_square && d.to_square) {
+            const opp = gameRef.current.move({
+              from: d.from_square,
+              to: d.to_square,
+            });
+            if (opp) {
+              setFen(gameRef.current.fen());
+              setMoves((prev) => [...prev, opp.san]);
+            }
+          }
+        } catch {
+          // ignore polling errors
+        }
+      }
+    }, pollInterval);
+
+    return () => clearInterval(id);
+  }, [gameOver, pollInterval, moves.length, robotId, opponent]); // ⬅️ added opponent here
+
+  const undoLast = (): void => {
+    if (moves.length === 0) return;
+    gameRef.current.undo();
+    setFen(gameRef.current.fen());
+    setMoves((prev) => prev.slice(0, -1));
+  };
+
+  return {
+    fen,
+    moves,
+    gameOver,
+    makeMove,
+    goToMove,
+    undoLast,
+    gameRef,
+    robotId,
+    timerSettings,
+  };
+}

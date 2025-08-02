@@ -1,0 +1,8 @@
+.timer-display {
+  display: flex;
+  gap: 1.5rem;
+  font-weight: bold;
+}
+.timer-display .active {
+  color: red;
+}

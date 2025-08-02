@@ -1,0 +1,67 @@
+.history-wrapper {
+  background-color: rgba(119, 118, 125, 0.205);
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  color: #c7e5e5;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 85%;
+  max-width: 500px; /* constrain overall width*/
+  margin: 10px auto;
+}
+
+.history-toolbar,
+.history-footer {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.history-toolbar button,
+.history-footer button {
+  background: transparent;
+  border: none;
+  color: #c7e5e5;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 0.25rem;
+  transition: color 0.2s ease;
+}
+.history-toolbar button:hover,
+.history-footer button:hover {
+  background-color: rgba(0, 150, 136, 0.2);
+}
+
+.history-container {
+  overflow-y: auto;
+  max-height: 200px;
+}
+
+.history-table {
+  border-collapse: collapse;
+}
+
+.history-table td {
+  width: 111px;
+  text-align: center;
+}
+
+.history-table .num {
+  opacity: 0.6;
+  text-align: center;
+  margin-right: 10px;
+  width: 30px;
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.history-table tr.current {
+  background-color: rgba(255, 255, 255, 0.16);
+}
+
+.history-footer .resign {
+  display: inline-block;
+}
