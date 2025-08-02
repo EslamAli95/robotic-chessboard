@@ -1,0 +1,16 @@
+# ─── Python venv ───────────────────────────────────────────────────────────
+/venv/
+__pycache__/
+
+# ─── React app build & deps ──────────────────────────────────────────────
+/robotic-chess-ui/node_modules/
+/robotic-chess-ui/build/
+
+# ─── OS / IDE files ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+
+# ─── Logs and env files ─────────────────────────────────────────────────
+*.log
+*.env*
