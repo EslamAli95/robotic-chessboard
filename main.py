@@ -11,14 +11,13 @@ app = FastAPI()
 # ─── CORS ──────────────────────────────────────────────────────────────────────
 # Allow  deployed frontend + local dev server
 app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",                         # Vite dev server
-        "https://robotic-chess-frontend.onrender.com",   # Deployed React SPA
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+  CORSMiddleware,
+  allow_origins=[
+      "http://localhost:3000",                       # CRA dev server
+      "https://robotic-chess-frontend.onrender.com", # Deployed SPA
+  ],
+  allow_methods=["*"],
+  allow_headers=["*"],
 )
 # ────────────────────────────────────────────────────────────────────────────────
 
