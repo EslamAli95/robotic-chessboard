@@ -12,10 +12,7 @@ app = FastAPI()
 # Allow  deployed frontend + local dev server
 app.add_middleware(
   CORSMiddleware,
-  allow_origins=[
-      "http://localhost:3000",                       # CRA dev server
-      "https://robotic-chess-frontend.onrender.com", # Deployed SPA
-  ],
+   allow_origins=["*"],
   allow_methods=["*"],
   allow_headers=["*"],
 )
