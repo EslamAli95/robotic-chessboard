@@ -1,7 +1,6 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from robot_controller import send_move_to_robot, get_last_detected_move
 import re, logging, traceback, os
@@ -11,32 +10,26 @@ app = FastAPI()
 # ─── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],     # adjust to specific domains if you like
+    allow_origins=["*"],   # or list your exact domains
     allow_methods=["*"],
     allow_headers=["*"],
 )
 # ────────────────────────────────────────────────────────────────────────────────
 
-# Serial ports mapping
-ROBOT_PORTS = {
-    "white": "/dev/ttyUSB0",
-    "black": "/dev/ttyUSB1",
-}
+# Serial port mapping
+ROBOT_PORTS = {"white": "/dev/ttyUSB0", "black": "/dev/ttyUSB1"}
 
-# Health check
+# Health check & API routes
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
 
-# Regex for chess notation
 MOVE_REGEX = re.compile(r"^[a-h][1-8]$")
 
-# --- Data Model ---
 class Move(BaseModel):
     from_square: str
     to_square:   str
 
-# --- POST /make-move ---
 @app.post("/robots/{robot_id}/make-move")
 def make_move(robot_id: str, move: Move):
     if not (MOVE_REGEX.match(move.from_square) and MOVE_REGEX.match(move.to_square)):
@@ -53,7 +46,6 @@ def make_move(robot_id: str, move: Move):
         raise HTTPException(500, "Failed to send move")
     return {"status": "success"}
 
-# --- GET /latest-move ---
 @app.get("/robots/{robot_id}/latest-move")
 def latest_move(robot_id: str):
     port = ROBOT_PORTS.get(robot_id)
@@ -62,16 +54,14 @@ def latest_move(robot_id: str):
     mv = get_last_detected_move(port)
     return mv or {"status": "waiting"}
 
-# ─── Static Files & SPA Fallback ────────────────────────────────────────────────
-# serve files under ./static
-if os.path.isdir("static"):
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-
-    # any other GET path not matched above should serve index.html
-    @app.get("/{full_path:path}", include_in_schema=False)
-    async def spa_fallback(full_path: str, request: Request):
-        index_file = os.path.join("static", "index.html")
-        if os.path.isfile(index_file):
-            return FileResponse(index_file)
-        raise HTTPException(404, "Not Found")
+# ─── Serve your React app ──────────────────────────────────────────────────────
+# 1️⃣ First check that `static/index.html` exists
+spa_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(spa_dir) and os.path.isfile(os.path.join(spa_dir, "index.html")):
+    # 2️⃣ Mount all static assets under `/`
+    app.mount(
+        "/", 
+        StaticFiles(directory=spa_dir, html=True),
+        name="spa",
+    )
 # ────────────────────────────────────────────────────────────────────────────────
