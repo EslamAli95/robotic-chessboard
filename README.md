@@ -1,148 +1,127 @@
 # Robotic Chessboard
 
-A full-stack framework for a cloud-enabled, physical chessboard with a React/TypeScript frontend and a FastAPI/Python backend driving serial communication with a chess-playing robot.
+A full-stack robotic chessboard application featuring:
 
-## Table of Contents
+* **Frontend:** React 18 + TypeScript SPA, built with Vite and styled with Tailwind CSS.
+* **Backend:** FastAPI + Pydantic, exposing REST and WebSocket endpoints, with USB-serial communication to chessboard hardware.
+* **Controller Module:** `robot_controller.py` abstracts PySerial I/O and supports a mock mode for development without hardware.
+* **Persistence:** In-memory state plus JSONL logs for replay and PGN export.
+* **Testing & CI/CD:** Jest + React Testing Library on the frontend, pytest + pytest-asyncio on the backend, and a GitHub Actions workflow.
 
-* [Features](#features)
-* [Prerequisites](#prerequisites)
-* [Getting Started](#getting-started)
+---
 
-  * [Backend](#backend)
-  * [Frontend](#frontend)
-* [Development Workflow](#development-workflow)
-* [Testing](#testing)
-* [Deployment](#deployment)
-* [Project Structure](#project-structure)
-* [License](#license)
+## Repository Structure
 
-## Features
-
-* **Interactive SPA**: Real-time chessboard UI with drag-and-drop moves, move history, and timer support.
-* **FastAPI Backend**: REST and WebSocket endpoints for move submission, history retrieval, and live updates.
-* **Serial Communication**: Asynchronous USB-serial protocol to interface with the physical chess robot.
-* **Mock Mode**: Run and test the full UI without hardware by toggling a mock flag.
-* **Persistence**: In-memory and JSONL logging with replay capability and PGN export.
-* **Testing & CI/CD**: Comprehensive unit, integration, and end-to-end tests with GitHub Actions.
+```
+robotic-chess-backend/       # Backend project folder\ n├── main.py               # FastAPI entrypoint
+├── models.py             # Pydantic schemas
+├── robot_controller.py   # Serial I/O and mock logic
+├── logs/                 # JSONL game logs
+├── requirements.txt      # Python dependencies
+├── venv/                 # (Optional) Python virtual environment
+└── robotic-chess-ui/     # Frontend React app
+    ├── package.json
+    ├── src/
+    ├── public/
+    └── ...
+```
 
 ## Prerequisites
 
-* Python 3.9+
-* Node.js 18+
-* Yarn or npm
-* USB access for the robot controller (optional if using mock mode)
+* **Python 3.9+**
+* **Node.js 18+** and **npm** or **yarn**
+* (Optional) A physical robotic chessboard connected via USB to your machine.
 
-## Getting Started
+## Backend Setup
 
-### Backend
-
-1. Create and activate a Python virtual environment:
+1. **Create & activate a virtual environment** (if not included):
 
    ```bash
    python3 -m venv venv
    source venv/bin/activate
    ```
 
-2. Install dependencies:
+2. **Install dependencies**:
 
    ```bash
-   pip install -r requirements.txt
+   pip install --break-system-packages --user -r requirements.txt
    ```
 
-3. Configure environment variables:
+3. **Environment variables** (optional):
 
    ```bash
-   export ROBOT_PORT=/dev/ttyUSB0
-   export MOCK=true      # set to false to use real hardware
+   export ROBOT_PORT_ALPHA=/dev/ttyUSB0
    ```
 
-4. Run the server:
+4. **Run the server**:
 
    ```bash
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
-5. Explore API docs:
+## Frontend Setup
 
-   * Swagger UI: `http://localhost:8000/docs`
-   * ReDoc: `http://localhost:8000/redoc`
-
-### Frontend
-
-1. Navigate to the `robotic-chess-ui` directory:
+1. **Navigate to the UI folder**:
 
    ```bash
    cd robotic-chess-ui
    ```
 
-2. Install dependencies:
+2. **Install packages** (npm or yarn):
 
    ```bash
+   npm install
+   # or
    yarn install
-   # or npm install
    ```
 
-3. Start the development server:
+3. **Start the dev server**:
 
    ```bash
+   npm run dev
+   # or
    yarn dev
-   # or npm run dev
    ```
 
-4. Open the app in your browser:
-   `http://localhost:5173`
+4. **Build for production**:
 
-## Development Workflow
-
-* **Backend**: Python, FastAPI, Pydantic models, PySerial for I/O.
-* **Frontend**: React 18, TypeScript, Vite, Tailwind CSS.
-* **Mock Mode**: Develop UI without hardware by enabling `MOCK=true`.
-* **Logging**: View move logs in `logs/{robot_id}.jsonl`.
+   ```bash
+   npm run build
+   ```
 
 ## Testing
 
-### Backend tests
-
-```bash
-pytest
-```
-
-### Frontend tests
-
-```bash
-yarn test
-# or npm run test
-```
-
-## Deployment
-
-* Containerize with Docker:
+* **Backend**:
 
   ```bash
-  docker build -t robotic-chess-backend .
-  docker run -e MOCK=true -p 8000:8000 robotic-chess-backend
+  pytest
   ```
-* Frontend can be built with `yarn build` and served on any static host.
 
-## Project Structure
+* **Frontend**:
 
-```
-/  
-├─ backend/            # FastAPI application  
-│  ├─ main.py  
-│  ├─ robot_controller.py  
-│  ├─ models.py  
-│  ├─ logs/  
-│  └─ requirements.txt  
-├─ robotic-chess-ui/   # React SPA  
-│  ├─ src/  
-│  └─ package.json  
-├─ chapters/           # LaTeX thesis chapters  
-├─ figures/            # Diagrams and illustrations  
-├─ main.tex            # LaTeX root document  
-└─ README.md  
-```
+  ```bash
+  cd robotic-chess-ui
+  npm test
+  # or
+  yarn test
+  ```
+
+## CI/CD
+
+A GitHub Actions workflow (`.github/workflows/ci.yml`) runs on push and pull requests:
+
+* Checks out code
+* Installs Python & Node
+* Runs backend tests
+* Runs frontend tests
+
+## Contributing
+
+1. Fork the repository.
+2. Create a feature branch: `git checkout -b feature/your-feature`.
+3. Commit your changes & push: `git push origin feature/your-feature`.
+4. Open a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+MIT © Eslam Ahmed Adly Yassin Ali
