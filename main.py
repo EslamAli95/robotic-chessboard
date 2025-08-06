@@ -4,13 +4,17 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from robot_controller import send_move_to_robot, get_last_detected_move
 import re, logging, traceback, os
+from dotenv import load_dotenv
+load_dotenv()
+
+MOCK_MODE = os.getenv("ROBOT_MOCK", "false").lower() in ("1", "true", "yes")
 
 app = FastAPI()
 
 # ─── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # or list your exact domains
+    allow_origins=["https://robotic-chess-frontend.onrender.com",],   
     allow_methods=["*"],
     allow_headers=["*"],
 )
