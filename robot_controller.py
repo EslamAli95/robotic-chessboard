@@ -3,7 +3,7 @@ import logging
 from typing import Optional, List, Tuple, Dict
 
 # Mock mode toggled via environment variable 'MOCK_ROBOT'
-MOCK = os.getenv("MOCK_ROBOT", "false").lower() in ("1", "true", "yes")
+MOCK = os.getenv("ROBOT_MOCK", "false").lower() in ("1","true","yes")
 logging.getLogger("robot_controller").info(f"[robot_controller] MOCK mode = {MOCK}")
 
 # Import core serial I/O routines
