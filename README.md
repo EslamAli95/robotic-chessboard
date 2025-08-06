@@ -89,6 +89,24 @@ robotic-chess-backend/       # Backend project folder\ n├── main.py       
    npm run build
    ```
 
+##🚀 Live Deployments
+
+Service
+
+URL
+
+Backend (FastAPI API)
+
+https://robotic-chess-backend.onrender.com
+
+Frontend (React SPA)
+
+https://robotic-chess-frontend.onrender.com
+
+You can find and copy these URLs from your Render dashboard under each service’s overview page.
+
+
+
 ## Testing
 
 * **Backend**:
