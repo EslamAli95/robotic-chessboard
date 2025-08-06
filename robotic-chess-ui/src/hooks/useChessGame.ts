@@ -1,5 +1,3 @@
-// File: src/hooks/useChessGame.ts
-
 import { useRef, useState, useEffect } from "react";
 import { Chess, Move as ChessJsMove } from "chess.js";
 import { sendMove, fetchLatestMove } from "../api";
@@ -144,6 +142,10 @@ export default function useChessGame(
 
     return () => clearInterval(id);
   }, [gameOver, pollInterval, moves.length, robotId, opponent]);
+
+  useEffect(() => {
+    setError(null);
+  }, [fen]);
 
   const undoLast = (): void => {
     if (moves.length === 0) return;
