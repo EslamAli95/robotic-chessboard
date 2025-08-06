@@ -1,22 +1,32 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from robot_controller import send_move_to_robot, get_last_detected_move
 import re
 import logging
 import traceback
+import os
 
 app = FastAPI()
 
 # ─── CORS ──────────────────────────────────────────────────────────────────────
-# Allow  deployed frontend + local dev server
+# Allow all origins (adjust as needed)
 app.add_middleware(
-  CORSMiddleware,
-   allow_origins=["*"],
-  allow_methods=["*"],
-  allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 # ────────────────────────────────────────────────────────────────────────────────
+
+# Mount React build output (served from the "static" folder)
+if os.path.isdir("static"):
+    app.mount(
+        "/", 
+        StaticFiles(directory="static", html=True), 
+        name="static"
+    )
 
 # Serial ports for each robot
 ROBOT_PORTS = {
@@ -76,7 +86,7 @@ def latest_move(robot_id: str):
 
     return {"status": "waiting", "message": "No move detected yet."}
 
-# --- Root Health Check ---
+# --- Root Health Check (falls back to SPA) ---
 @app.get("/")
 def root():
     return {"message": "Robotic Chess API is running!"}
