@@ -12,6 +12,9 @@ ROBOT_PORTS = {
      "white": "/dev/ttyUSB0",
      "black": "/dev/ttyUSB1",
  }
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
 
 # Enable CORS for React dev server
 app.add_middleware(
