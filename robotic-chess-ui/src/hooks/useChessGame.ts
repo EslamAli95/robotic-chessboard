@@ -18,6 +18,7 @@ export interface UseChessGame {
   gameOver: boolean;
   robotId: RobotId;
   timerSettings: TimerSettings;
+  error: string | null;
 
   makeMove: (from: string, to: string) => boolean;
   goToMove: (halfMoveIndex: number) => void;
@@ -28,27 +29,33 @@ export interface UseChessGame {
 export default function useChessGame(
   robotId: RobotId,
   timerSettings: TimerSettings,
-  opponent: OpponentType, // ⬅️ NEW parameter to choose AI vs. human/robot
+  opponent: OpponentType,
   pollInterval = 2000
 ): UseChessGame {
   const gameRef = useRef(new Chess());
   const [fen, setFen] = useState<string>(gameRef.current.fen());
   const [moves, setMoves] = useState<string[]>([]);
   const [gameOver, setGameOver] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
 
   const makeMove = (from: string, to: string): boolean => {
     let mv: ChessJsMove;
     try {
       const result = gameRef.current.move({ from, to, promotion: "q" });
-      if (!result) return false;
+      if (!result) {
+        setError("Illegal move");
+        return false;
+      }
       mv = result;
     } catch {
+      setError("Illegal move");
       return false;
     }
 
     const san = mv.san;
     setFen(gameRef.current.fen());
     setMoves((prev) => [...prev, san]);
+    setError(null);
 
     if (gameRef.current.isCheckmate()) {
       setGameOver(true);
@@ -57,19 +64,23 @@ export default function useChessGame(
       alert(`Checkmate! ${victor} wins!`);
     }
 
-    sendMove(robotId, from, to).catch((e: any) => {
-      // Rollback on error
-      gameRef.current.undo();
-      setFen(gameRef.current.fen());
-      setMoves((prev) => prev.filter((m) => m !== san));
-      console.error("API error sending move:", e.response?.data || e);
-      const detail =
-        e.response?.data?.detail ||
-        e.response?.data?.message ||
-        e.message ||
-        "Server error sending move to robot";
-      alert(detail);
-    });
+    sendMove(robotId, from, to)
+      .then(() => {
+        setError(null);
+      })
+      .catch((e: any) => {
+        // Rollback on error
+        gameRef.current.undo();
+        setFen(gameRef.current.fen());
+        setMoves((prev) => prev.filter((m) => m !== san));
+        console.error("API error sending move:", e.response?.data || e);
+        const detail =
+          e.response?.data?.detail ||
+          e.response?.data?.message ||
+          e.message ||
+          "Server error sending move to robot";
+        setError(detail);
+      });
 
     return true;
   };
@@ -109,6 +120,7 @@ export default function useChessGame(
             if (opp) {
               setFen(gameRef.current.fen());
               setMoves((prev) => [...prev, opp.san]);
+              setError(null);
             }
           }
         } catch {
@@ -125,6 +137,7 @@ export default function useChessGame(
     gameRef.current.undo();
     setFen(gameRef.current.fen());
     setMoves((prev) => prev.slice(0, -1));
+    setError(null);
   };
 
   return {
@@ -137,5 +150,6 @@ export default function useChessGame(
     gameRef,
     robotId,
     timerSettings,
+    error,
   };
 }
