@@ -1,92 +1,77 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from robot_controller import send_move_to_robot, get_last_detected_move
-import re
-import logging
-import traceback
-import os
+import re, logging, traceback, os
 
 app = FastAPI()
 
 # ─── CORS ──────────────────────────────────────────────────────────────────────
-# Allow all origins (adjust as needed)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"],     # adjust to specific domains if you like
     allow_methods=["*"],
     allow_headers=["*"],
 )
 # ────────────────────────────────────────────────────────────────────────────────
 
-# Mount React build output (served from the "static" folder)
-if os.path.isdir("static"):
-    app.mount(
-        "/", 
-        StaticFiles(directory="static", html=True), 
-        name="static"
-    )
-
-# Serial ports for each robot
+# Serial ports mapping
 ROBOT_PORTS = {
     "white": "/dev/ttyUSB0",
     "black": "/dev/ttyUSB1",
 }
 
-# Simple health check
+# Health check
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
 
-# Regex to validate chess square notation (a-h followed by 1-8)
+# Regex for chess notation
 MOVE_REGEX = re.compile(r"^[a-h][1-8]$")
 
-# --- Data Models ---
+# --- Data Model ---
 class Move(BaseModel):
-    from_square: str  # e.g., "e2"
-    to_square:   str  # e.g., "e4"
+    from_square: str
+    to_square:   str
 
-# --- POST /make-move Endpoint ---
+# --- POST /make-move ---
 @app.post("/robots/{robot_id}/make-move")
 def make_move(robot_id: str, move: Move):
-    # Validate chess notation
     if not (MOVE_REGEX.match(move.from_square) and MOVE_REGEX.match(move.to_square)):
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid square notation. Use letters a-h and numbers 1-8, e.g. 'e2', 'g8'."
-        )
-
+        raise HTTPException(400, "Invalid square notation")
     port = ROBOT_PORTS.get(robot_id)
-    if port is None:
-        raise HTTPException(status_code=404, detail=f"Unknown robot '{robot_id}'")
-
-    # Send move to robot, catching and logging any exception
+    if not port:
+        raise HTTPException(404, f"Unknown robot '{robot_id}'")
     try:
-        success = send_move_to_robot(move.from_square, move.to_square, port)
+        ok = send_move_to_robot(move.from_square, move.to_square, port)
     except Exception:
         logging.getLogger("robot_controller").error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="Internal error sending move")
+        raise HTTPException(500, "Error sending move")
+    if not ok:
+        raise HTTPException(500, "Failed to send move")
+    return {"status": "success"}
 
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to send move to robot")
-
-    return {"status": "success", "message": "Move executed"}
-
-# --- GET /latest-move Endpoint ---
+# --- GET /latest-move ---
 @app.get("/robots/{robot_id}/latest-move")
 def latest_move(robot_id: str):
     port = ROBOT_PORTS.get(robot_id)
-    if port is None:
-        raise HTTPException(status_code=404, detail=f"Unknown robot '{robot_id}'")
+    if not port:
+        raise HTTPException(404, f"Unknown robot '{robot_id}'")
+    mv = get_last_detected_move(port)
+    return mv or {"status": "waiting"}
 
-    move = get_last_detected_move(port)
-    if move:
-        return move
+# ─── Static Files & SPA Fallback ────────────────────────────────────────────────
+# serve files under ./static
+if os.path.isdir("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
-    return {"status": "waiting", "message": "No move detected yet."}
-
-# --- Root Health Check (falls back to SPA) ---
-@app.get("/")
-def root():
-    return {"message": "Robotic Chess API is running!"}
+    # any other GET path not matched above should serve index.html
+    @app.get("/{full_path:path}", include_in_schema=False)
+    async def spa_fallback(full_path: str, request: Request):
+        index_file = os.path.join("static", "index.html")
+        if os.path.isfile(index_file):
+            return FileResponse(index_file)
+        raise HTTPException(404, "Not Found")
+# ────────────────────────────────────────────────────────────────────────────────
