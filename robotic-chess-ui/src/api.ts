@@ -1,6 +1,7 @@
 import axios from "axios";
 
-const API_BASE = "https://robotic-chess-backend.onrender.com";
+const API_BASE =
+  process.env.REACT_APP_API_URL ?? "https://robotic-chessboard.onrender.com";
 
 export const sendMove = (
   robotId: "white" | "black",
