@@ -9,7 +9,7 @@ import traceback
 app = FastAPI()
 
 # ─── CORS ──────────────────────────────────────────────────────────────────────
-# Allow your deployed frontend + local dev server
+# Allow  deployed frontend + local dev server
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
