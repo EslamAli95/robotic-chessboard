@@ -1,3 +1,5 @@
+// File: src/hooks/useChessGame.ts
+
 import { useRef, useState, useEffect } from "react";
 import { Chess, Move as ChessJsMove } from "chess.js";
 import { sendMove, fetchLatestMove } from "../api";
@@ -39,6 +41,9 @@ export default function useChessGame(
   const [error, setError] = useState<string | null>(null);
 
   const makeMove = (from: string, to: string): boolean => {
+    // Clear any previous error
+    setError(null);
+
     let mv: ChessJsMove;
     try {
       const result = gameRef.current.move({ from, to, promotion: "q" });
@@ -55,6 +60,8 @@ export default function useChessGame(
     const san = mv.san;
     setFen(gameRef.current.fen());
     setMoves((prev) => [...prev, san]);
+
+    // Clear error now that the move was valid
     setError(null);
 
     if (gameRef.current.isCheckmate()) {
@@ -64,8 +71,10 @@ export default function useChessGame(
       alert(`Checkmate! ${victor} wins!`);
     }
 
+    // Send move to backend
     sendMove(robotId, from, to)
       .then(() => {
+        // On success, ensure error is cleared
         setError(null);
       })
       .catch((e: any) => {
@@ -73,12 +82,14 @@ export default function useChessGame(
         gameRef.current.undo();
         setFen(gameRef.current.fen());
         setMoves((prev) => prev.filter((m) => m !== san));
+
         console.error("API error sending move:", e.response?.data || e);
         const detail =
           e.response?.data?.detail ||
           e.response?.data?.message ||
           e.message ||
           "Server error sending move to robot";
+
         setError(detail);
       });
 
@@ -100,6 +111,8 @@ export default function useChessGame(
     }
     gameRef.current = g;
     setFen(g.fen());
+    // Moving through history clears any error
+    setError(null);
   };
 
   useEffect(() => {
@@ -107,7 +120,6 @@ export default function useChessGame(
     const id = setInterval(async () => {
       if (gameOver) return;
 
-      // human or remote‐robot branch
       if (opponent === "robot" || opponent === "human") {
         try {
           const res = await fetchLatestMove(robotId);
@@ -120,6 +132,7 @@ export default function useChessGame(
             if (opp) {
               setFen(gameRef.current.fen());
               setMoves((prev) => [...prev, opp.san]);
+              // Successful opponent move clears error
               setError(null);
             }
           }
@@ -130,13 +143,14 @@ export default function useChessGame(
     }, pollInterval);
 
     return () => clearInterval(id);
-  }, [gameOver, pollInterval, moves.length, robotId, opponent]); // ⬅️ added opponent here
+  }, [gameOver, pollInterval, moves.length, robotId, opponent]);
 
   const undoLast = (): void => {
     if (moves.length === 0) return;
     gameRef.current.undo();
     setFen(gameRef.current.fen());
     setMoves((prev) => prev.slice(0, -1));
+    // Undo also clears error state
     setError(null);
   };
 
