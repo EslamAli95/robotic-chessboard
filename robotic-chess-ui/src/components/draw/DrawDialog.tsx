@@ -15,10 +15,14 @@ export default function DrawDialog({
   return (
     <div className="draw-modal-backdrop">
       <div className="draw-modal">
-        <p>Your opponent offers a draw. Do you accept?</p>
+        <p>Your opponent has offered a draw. Do you accept?</p>
         <div className="draw-modal-buttons">
-          <button onClick={onAccept}>Accept</button>
-          <button onClick={onReject}>Reject</button>
+          <button className="confirm" onClick={onAccept}>
+            Yes
+          </button>
+          <button className="cancel" onClick={onReject}>
+            No
+          </button>
         </div>
       </div>
     </div>

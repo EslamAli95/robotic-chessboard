@@ -1,3 +1,4 @@
+import "./UndoDialog.css";
 interface UndoDialogProps {
   visible: boolean;
   onAccept: () => void;

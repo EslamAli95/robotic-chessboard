@@ -1,0 +1,17 @@
+button {
+  background: var(--button-bg, #fff);
+  color: var(--button-text, #333);
+  border: none;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+p {
+  margin: 0 0 1rem;
+  color: #d6d1d1;
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.4;
+}
