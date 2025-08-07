@@ -1,9 +1,8 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
-import re, logging, traceback, os
+import re, logging, traceback
 
 app = FastAPI()
 
@@ -11,9 +10,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",                       # CRA dev server
-        "https://robotic-chess-frontend.onrender.com",  # old prod frontend
-        "https://robotic-chessboard.onrender.com",      # new prod domain
+        "http://localhost:3000",
+        "https://robotic-chess-frontend.onrender.com",
+        "https://robotic-chessboard.onrender.com",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,18 +22,16 @@ app.add_middleware(
 
 # Serial port mapping & validation
 ROBOT_PORTS = {"white": "/dev/ttyUSB0", "black": "/dev/ttyUSB1"}
-MOVE_REGEX  = re.compile(r"^[a-h][1-8]$")
+MOVE_REGEX   = re.compile(r"^[a-h][1-8]$")
 
 class Move(BaseModel):
     from_square: str
     to_square:   str
 
-# --- Health check ---
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
 
-# --- API endpoints ---
 @app.post("/robots/{robot_id}/make-move")
 def make_move(robot_id: str, move: Move):
     if not (MOVE_REGEX.match(move.from_square) and MOVE_REGEX.match(move.to_square)):
@@ -61,15 +58,14 @@ def latest_move(robot_id: str):
     mv = __import__("robot_controller").get_last_detected_move(port)
     return mv or {"status": "waiting"}
 
-# ─── Serve static assets under /static ────────────────────────────────────────
-# CRA build put its JS/CSS under static/js and static/css
-spa_static_dir = os.path.join(os.path.dirname(__file__), "static", "static")
-app.mount("/static", StaticFiles(directory=spa_static_dir), name="static")
-
-# ─── Catch-all to return index.html so client-side routing works ─────────────
-index_file = os.path.join(os.path.dirname(__file__), "static", "index.html")
-
-@app.get("/{full_path:path}")
-async def serve_spa(full_path: str):
-    return FileResponse(index_file)
+# ─── Serve the React build & SPA fallback ──────────────────────────────────────
+# This single mount will:
+#   • serve /index.html
+#   • serve /manifest.json, /favicon.ico, /robots.txt, /static/*, etc.
+#   • fall back to index.html for any other path
+app.mount(
+    "/",
+    StaticFiles(directory="static", html=True),
+    name="spa",
+)
 # ────────────────────────────────────────────────────────────────────────────────
