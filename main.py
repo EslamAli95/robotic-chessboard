@@ -1,7 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import re, logging, traceback, os
 
@@ -11,9 +10,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",                       # CRA dev server
-        "https://robotic-chess-frontend.onrender.com",  # old prod frontend
-        "https://robotic-chessboard.onrender.com",      # new prod domain
+        "http://localhost:3000",                      # CRA dev server
+        "https://robotic-chess-frontend.onrender.com",
+        "https://robotic-chessboard.onrender.com",
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -23,7 +22,6 @@ app.add_middleware(
 
 # Serial port mapping
 ROBOT_PORTS = {"white": "/dev/ttyUSB0", "black": "/dev/ttyUSB1"}
-
 MOVE_REGEX = re.compile(r"^[a-h][1-8]$")
 
 class Move(BaseModel):
@@ -62,17 +60,14 @@ def latest_move(robot_id: str):
     mv = __import__("robot_controller").get_last_detected_move(port)
     return mv or {"status": "waiting"}
 
-# ─── Serve React build ─────────────────────────────────────────────────────────
-# 1) Mount any static assets under /static
+# ─── Serve CRA build output ────────────────────────────────────────────────────
+# This single mount serves:
+#   • GET /            → static/index.html
+#   • GET /static/*    → static/static/*
+#   • any other path   → static/index.html (html=True fallback)
 app.mount(
-    "/static",
-    StaticFiles(directory="static"),
-    name="static",
+    "/",
+    StaticFiles(directory="static", html=True),
+    name="spa",
 )
-
-# 2) Catch-all route to return index.html (so React Router works)
-@app.get("/{full_path:path}")
-async def spa(full_path: str):
-    index_path = os.path.join("static", "index.html")
-    return FileResponse(index_path)
 # ────────────────────────────────────────────────────────────────────────────────
