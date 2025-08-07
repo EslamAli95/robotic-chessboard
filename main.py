@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import re, logging, traceback, os
 
@@ -60,14 +61,17 @@ def latest_move(robot_id: str):
     mv = __import__("robot_controller").get_last_detected_move(port)
     return mv or {"status": "waiting"}
 
-# ─── Serve CRA build output ────────────────────────────────────────────────────
-# This single mount serves:
-#   • GET /            → static/index.html
-#   • GET /static/*    → static/static/*
-#   • any other path   → static/index.html (html=True fallback)
+# ─── Serve React build output ────────────────────────────────────────────────────
+
+# 1️ Mount the static assets at /static
 app.mount(
-    "/",
-    StaticFiles(directory="static", html=True),
-    name="spa",
+    "/static",
+    StaticFiles(directory="static"),
+    name="static",
 )
+
+# 2️ Catch-all: serve index.html so client-side routing works
+@app.get("/{full_path:path}")
+async def spa(full_path: str):
+    return FileResponse(os.path.join("static", "index.html"))
 # ────────────────────────────────────────────────────────────────────────────────
