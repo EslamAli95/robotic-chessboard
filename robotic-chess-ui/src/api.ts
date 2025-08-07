@@ -1,5 +1,7 @@
 import axios from "axios";
 
+axios.defaults.baseURL = "";
+
 export const sendMove = (
   robotId: "white" | "black",
   from: string,
