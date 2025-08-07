@@ -11,9 +11,9 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",                      # CRA dev server
-        "https://robotic-chess-frontend.onrender.com",
-        "https://robotic-chessboard.onrender.com",
+        "http://localhost:3000",                       # CRA dev server
+        "https://robotic-chess-frontend.onrender.com",  # old prod frontend
+        "https://robotic-chessboard.onrender.com",      # new prod domain
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -21,9 +21,9 @@ app.add_middleware(
 )
 # ────────────────────────────────────────────────────────────────────────────────
 
-# Serial port mapping
+# Serial port mapping & validation
 ROBOT_PORTS = {"white": "/dev/ttyUSB0", "black": "/dev/ttyUSB1"}
-MOVE_REGEX = re.compile(r"^[a-h][1-8]$")
+MOVE_REGEX  = re.compile(r"^[a-h][1-8]$")
 
 class Move(BaseModel):
     from_square: str
@@ -61,17 +61,15 @@ def latest_move(robot_id: str):
     mv = __import__("robot_controller").get_last_detected_move(port)
     return mv or {"status": "waiting"}
 
-# ─── Serve React build output ────────────────────────────────────────────────────
+# ─── Serve static assets under /static ────────────────────────────────────────
+# CRA build put its JS/CSS under static/js and static/css
+spa_static_dir = os.path.join(os.path.dirname(__file__), "static", "static")
+app.mount("/static", StaticFiles(directory=spa_static_dir), name="static")
 
-# 1️ Mount the static assets at /static
-app.mount(
-    "/static",
-    StaticFiles(directory="static"),
-    name="static",
-)
+# ─── Catch-all to return index.html so client-side routing works ─────────────
+index_file = os.path.join(os.path.dirname(__file__), "static", "index.html")
 
-# 2️ Catch-all: serve index.html so client-side routing works
 @app.get("/{full_path:path}")
-async def spa(full_path: str):
-    return FileResponse(os.path.join("static", "index.html"))
+async def serve_spa(full_path: str):
+    return FileResponse(index_file)
 # ────────────────────────────────────────────────────────────────────────────────
