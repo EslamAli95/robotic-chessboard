@@ -11,7 +11,7 @@ interface Props {
   selected?: string | null;
   onSelect: (sq: string) => void;
   orientation?: "white" | "black";
-  onError?: (msg: string) => void;
+  onError?: (msg: string | null) => void;
 }
 
 export default function ChessArea({
@@ -47,7 +47,9 @@ export default function ChessArea({
     }
     const ok = makeMove(from, to);
     if (!ok) {
-      onError?.("Invalid move!");
+      onError?.("Illegal move");
+    } else {
+      onError?.(null);
     }
     return ok;
   };
