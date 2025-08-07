@@ -7,19 +7,16 @@ import re, logging, traceback, os
 from dotenv import load_dotenv
 
 load_dotenv()
-
 MOCK_MODE = os.getenv("ROBOT_MOCK", "false").lower() in ("1", "true", "yes")
 
-# ─── FastAPI app and CORS ──────────────────────────────────────────────────────
 app = FastAPI()
 
-# 1️⃣ CORS *must* be registered BEFORE any routes or mounts
+# ─── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://robotic-chess-frontend.onrender.com",  # prod SPA
         "http://localhost:3000",                        # CRA dev server
-        "http://localhost:5173",                        # Vite dev server (if used)
     ],
     allow_methods=["*"],
     allow_headers=["*"],
@@ -27,21 +24,13 @@ app.add_middleware(
 )
 # ────────────────────────────────────────────────────────────────────────────────
 
-# ─── Static SPA mount ──────────────────────────────────────────────────────────
-spa_dir = os.path.join(os.path.dirname(__file__), "static")
-if os.path.isdir(spa_dir) and os.path.isfile(os.path.join(spa_dir, "index.html")):
-    app.mount("/", StaticFiles(directory=spa_dir, html=True), name="spa")
-# ────────────────────────────────────────────────────────────────────────────────
-
-# ─── Serial port mapping ───────────────────────────────────────────────────────
+# Serial port mapping
 ROBOT_PORTS = {"white": "/dev/ttyUSB0", "black": "/dev/ttyUSB1"}
-# ────────────────────────────────────────────────────────────────────────────────
 
-# ─── Health check ──────────────────────────────────────────────────────────────
+# Health check
 @app.get("/healthz")
 async def healthz():
     return {"status": "ok"}
-# ────────────────────────────────────────────────────────────────────────────────
 
 MOVE_REGEX = re.compile(r"^[a-h][1-8]$")
 
@@ -49,10 +38,9 @@ class Move(BaseModel):
     from_square: str
     to_square:   str
 
-# ─── POST /make-move ────────────────────────────────────────────────────────────
+# --- POST /make-move ---
 @app.post("/robots/{robot_id}/make-move")
 def make_move(robot_id: str, move: Move):
-    # Validate notation
     if not (MOVE_REGEX.match(move.from_square) and MOVE_REGEX.match(move.to_square)):
         raise HTTPException(400, "Invalid square notation")
 
@@ -70,9 +58,8 @@ def make_move(robot_id: str, move: Move):
         raise HTTPException(500, "Failed to send move")
 
     return {"status": "success"}
-# ────────────────────────────────────────────────────────────────────────────────
 
-# ─── GET /latest-move ──────────────────────────────────────────────────────────
+#  GET /latest-move 
 @app.get("/robots/{robot_id}/latest-move")
 def latest_move(robot_id: str):
     port = ROBOT_PORTS.get(robot_id)
@@ -81,4 +68,10 @@ def latest_move(robot_id: str):
 
     mv = get_last_detected_move(port)
     return mv or {"status": "waiting"}
-# ────────────────────────────────────────────────────────────────────────────────
+
+# Serve React app 
+spa_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.isdir(spa_dir) and os.path.isfile(os.path.join(spa_dir, "index.html")):
+
+    app.mount("/", StaticFiles(directory=spa_dir, html=True), name="spa")
+
