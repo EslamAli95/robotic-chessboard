@@ -39,7 +39,6 @@ export default function useChessGame(
   const [error, setError] = useState<string | null>(null);
 
   const makeMove = (from: string, to: string): boolean => {
-    // Clear any previous error
     setError(null);
 
     let mv: ChessJsMove;
@@ -59,7 +58,7 @@ export default function useChessGame(
     setFen(gameRef.current.fen());
     setMoves((prev) => [...prev, san]);
 
-    // Clear error now that the move was valid
+    // ← NEW: ensure we wipe any stale error once the move is really in
     setError(null);
 
     if (gameRef.current.isCheckmate()) {
@@ -69,25 +68,21 @@ export default function useChessGame(
       alert(`Checkmate! ${victor} wins!`);
     }
 
-    // Send move to backend
     sendMove(robotId, from, to)
       .then(() => {
-        // On success, ensure error is cleared
+        // still clear any error on successful round-trip
         setError(null);
       })
       .catch((e: any) => {
-        // Rollback on error
+        // rollback on backend failure
         gameRef.current.undo();
         setFen(gameRef.current.fen());
         setMoves((prev) => prev.filter((m) => m !== san));
-
-        console.error("API error sending move:", e.response?.data || e);
         const detail =
           e.response?.data?.detail ||
           e.response?.data?.message ||
           e.message ||
           "Server error sending move to robot";
-
         setError(detail);
       });
 
@@ -99,17 +94,13 @@ export default function useChessGame(
     const g = new Chess();
     for (let i = 0; i < clamped; i++) {
       try {
-        const result = g.move(moves[i], { strict: false });
-        if (!result) {
-          console.warn(`Failed to apply SAN move #${i + 1}: ${moves[i]}`);
-        }
-      } catch (err) {
-        console.warn(`Error replaying SAN move #${i + 1}:`, moves[i], err);
+        g.move(moves[i], { strict: false });
+      } catch {
+        /* ignore replay errors */
       }
     }
     gameRef.current = g;
     setFen(g.fen());
-    // Moving through history clears any error
     setError(null);
   };
 
@@ -130,12 +121,11 @@ export default function useChessGame(
             if (opp) {
               setFen(gameRef.current.fen());
               setMoves((prev) => [...prev, opp.san]);
-              // Successful opponent move clears error
               setError(null);
             }
           }
         } catch {
-          // ignore polling errors
+          /* ignore polling failures */
         }
       }
     }, pollInterval);
@@ -143,6 +133,7 @@ export default function useChessGame(
     return () => clearInterval(id);
   }, [gameOver, pollInterval, moves.length, robotId, opponent]);
 
+  // whenever fen updates (i.e. any valid move/undo), clear errors
   useEffect(() => {
     setError(null);
   }, [fen]);
@@ -152,7 +143,7 @@ export default function useChessGame(
     gameRef.current.undo();
     setFen(gameRef.current.fen());
     setMoves((prev) => prev.slice(0, -1));
-    // Undo also clears error state
+    // clear error on undo
     setError(null);
   };
 
